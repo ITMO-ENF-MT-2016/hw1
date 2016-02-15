@@ -1,11 +1,12 @@
 package ru.ifmo.mt.fgb;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 /**
  * Bank implementation.
  *
- * <p>:TODO: This implementation has to be made thread-safe.
- *
- * @author <Фамилия>
+ * @author Tolstov
  */
 public class BankImpl implements Bank {
     /**
@@ -34,59 +35,72 @@ public class BankImpl implements Bank {
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long getAmount(int index) {
-        return accounts[index].amount;
+        Account account = accounts[index];
+        account.lock.lock();
+        int result = account.amount;
+        account.lock.unlock();
+        return result;
     }
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long getTotalAmount() {
         long sum = 0;
         for (Account account : accounts) {
+            account.lock.lock();
             sum += account.amount;
+        }
+        for (int i = accounts.length - 1; i >= 0; i--) {
+            accounts[i].lock.unlock();
         }
         return sum;
     }
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long deposit(int index, long amount) {
         if (amount <= 0)
             throw new IllegalArgumentException("Invalid amount: " + amount);
         Account account = accounts[index];
-        if (amount > MAX_AMOUNT || account.amount + amount > MAX_AMOUNT)
-            throw new IllegalStateException("Overflow");
-        account.amount += amount;
-        return account.amount;
+        account.lock.lock();
+        try {
+            if (amount > MAX_AMOUNT || account.amount + amount > MAX_AMOUNT)
+                throw new IllegalStateException("Overflow");
+            account.amount += amount;
+            return account.amount;
+        } finally {
+            account.lock.unlock();
+        }
     }
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long withdraw(int index, long amount) {
         if (amount <= 0)
             throw new IllegalArgumentException("Invalid amount: " + amount);
         Account account = accounts[index];
-        if (account.amount - amount < 0)
-            throw new IllegalStateException("Underflow");
-        account.amount -= amount;
-        return account.amount;
+        account.lock.lock();
+        try {
+            if (account.amount - amount < 0)
+                throw new IllegalStateException("Underflow");
+            account.amount -= amount;
+            return account.amount;
+        } finally {
+            account.lock.unlock();
+        }
     }
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public void transfer(int fromIndex, int toIndex, long amount) {
@@ -96,12 +110,29 @@ public class BankImpl implements Bank {
             throw new IllegalArgumentException("fromIndex == toIndex");
         Account from = accounts[fromIndex];
         Account to = accounts[toIndex];
-        if (amount > from.amount)
-            throw new IllegalStateException("Underflow");
-        else if (amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)
-            throw new IllegalStateException("Overflow");
-        from.amount -= amount;
-        to.amount += amount;
+        if (fromIndex < toIndex) {
+            from.lock.lock();
+            to.lock.lock();
+        } else {
+            to.lock.lock();
+            from.lock.lock();
+        }
+        try {
+            if (amount > from.amount)
+                throw new IllegalStateException("Underflow");
+            else if (amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)
+                throw new IllegalStateException("Overflow");
+            from.amount -= amount;
+            to.amount += amount;
+        } finally {
+            if (fromIndex < toIndex) {
+                to.lock.unlock();
+                from.lock.unlock();
+            } else {
+                from.lock.unlock();
+                to.lock.unlock();
+            }
+        }
     }
 
     /**
@@ -112,5 +143,10 @@ public class BankImpl implements Bank {
          * Amount of funds in this account.
          */
         int amount;
+
+        /**
+         * Lock for the account
+         */
+        Lock lock = new ReentrantLock();
     }
 }
