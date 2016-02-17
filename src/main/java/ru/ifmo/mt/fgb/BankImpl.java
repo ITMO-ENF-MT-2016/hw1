@@ -6,8 +6,6 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * Bank implementation.
  *
- * <p>:TODO: This implementation has to be made thread-safe.
- *
  * @author <Воронцов>
  */
 public class BankImpl implements Bank {
@@ -37,7 +35,6 @@ public class BankImpl implements Bank {
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long getAmount(int index) {
@@ -50,7 +47,6 @@ public class BankImpl implements Bank {
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long getTotalAmount() {
@@ -59,13 +55,14 @@ public class BankImpl implements Bank {
             account.lock.lock();
             sum += account.amount;
         }
-        for (int i = accounts.length - 1; i >= 0; i--) { accounts[i].lock.unlock(); }
+        for (int i = accounts.length - 1; i >= 0; i--) {
+            accounts[i].lock.unlock();
+        }
         return sum;
     }
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long deposit(int index, long amount) {
@@ -85,7 +82,6 @@ public class BankImpl implements Bank {
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public long withdraw(int index, long amount) {
@@ -105,7 +101,6 @@ public class BankImpl implements Bank {
 
     /**
      * {@inheritDoc}
-     * <p>:TODO: This method has to be made thread-safe.
      */
     @Override
     public void transfer(int fromIndex, int toIndex, long amount) {
