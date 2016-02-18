@@ -159,7 +159,7 @@ public class BankImpl implements Bank {
         /**
          * Amount of funds in this account.
          */
-        Lock locker = new ReentrantLock();
+        final Lock locker = new ReentrantLock();
         int amount;
     }
 }
