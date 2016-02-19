@@ -1,5 +1,6 @@
 package ru.ifmo.mt.fgb;
 
+import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -39,12 +40,12 @@ public class BankImpl implements Bank {
      */
     @Override
     public long getAmount(int index) {
-        accounts[index].locker.lock();
+        accounts[index].lock.lock();
 
         try {
             return accounts[index].amount;
         } finally {
-            accounts[index].locker.unlock();
+            accounts[index].lock.unlock();
         }
     }
 
@@ -54,7 +55,7 @@ public class BankImpl implements Bank {
     @Override
     public long getTotalAmount() {
         for (Account account : accounts) {
-            account.locker.lock();
+            account.lock.lock();
         }
 
         try {
@@ -64,8 +65,8 @@ public class BankImpl implements Bank {
             }
             return sum;
         } finally {
-            for (Account account : accounts) {
-                account.locker.unlock();
+            for (int i = accounts.length - 1; i >= 0; i--) {
+                accounts[i].lock.unlock();
             }
         }
     }
@@ -80,7 +81,7 @@ public class BankImpl implements Bank {
 
         Account account = accounts[index];
 
-        account.locker.lock();
+        account.lock.lock();
         try {
             if (amount > MAX_AMOUNT || account.amount + amount > MAX_AMOUNT)
                 throw new IllegalStateException("Overflow");
@@ -88,7 +89,7 @@ public class BankImpl implements Bank {
             account.amount += amount;
             return account.amount;
         } finally {
-            account.locker.unlock();
+            account.lock.unlock();
         }
     }
 
@@ -102,7 +103,7 @@ public class BankImpl implements Bank {
 
         Account account = accounts[index];
 
-        account.locker.lock();
+        account.lock.lock();
         try {
             if (account.amount - amount < 0)
                 throw new IllegalStateException("Underflow");
@@ -110,7 +111,7 @@ public class BankImpl implements Bank {
             account.amount -= amount;
             return account.amount;
         } finally {
-            account.locker.unlock();
+            account.lock.unlock();
         }
     }
 
@@ -127,28 +128,25 @@ public class BankImpl implements Bank {
         Account from = accounts[fromIndex];
         Account to = accounts[toIndex];
 
-        Lock lesserLock = from.locker;
-        Lock greaterLock = to.locker;
+        Lock firstLock = from.lock;
+        Lock secondLock = to.lock;
         if (fromIndex > toIndex) {
-            lesserLock = to.locker;
-            greaterLock = from.locker;
+            firstLock = to.lock;
+            secondLock = from.lock;
         }
 
-        lesserLock.lock();
+        firstLock.lock();
+        secondLock.lock();
         try {
-            greaterLock.lock();
-            try {
-                if (amount > from.amount)
-                    throw new IllegalStateException("Underflow");
-                else if (amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)
-                    throw new IllegalStateException("Overflow");
-                from.amount -= amount;
-                to.amount += amount;
-            } finally {
-                greaterLock.unlock();
-            }
+            if (amount > from.amount)
+                throw new IllegalStateException("Underflow");
+            else if (amount > MAX_AMOUNT || to.amount + amount > MAX_AMOUNT)
+                throw new IllegalStateException("Overflow");
+            from.amount -= amount;
+            to.amount += amount;
         } finally {
-            lesserLock.unlock();
+            secondLock.unlock();
+            firstLock.unlock();
         }
     }
 
@@ -159,7 +157,7 @@ public class BankImpl implements Bank {
         /**
          * Amount of funds in this account.
          */
-        final Lock locker = new ReentrantLock();
+        final Lock lock = new ReentrantLock();
         int amount;
     }
 }
