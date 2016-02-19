@@ -1,13 +1,12 @@
 package ru.ifmo.mt.fgb;
 
-import java.util.Arrays;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Bank implementation.
  *
- * @author Ван-Юн-Сян Тяня
+ * @author Ван-Юн-Сян Яна
  */
 public class BankImpl implements Bank {
     /**
